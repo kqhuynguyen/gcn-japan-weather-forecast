@@ -3,7 +3,7 @@ from os.path import isfile, join, dirname
 from datetime import datetime
 import pandas as pd
 
-kanto_data_path = "/home/infernov/Desktop/Summer/data/tokyo"
+kanto_data_path = "./data/tokyo"
 resampled_data_path = "./resampled"
 file_names = [f for f in listdir(kanto_data_path) if isfile(join(kanto_data_path,f))] # list all files
 
@@ -14,7 +14,6 @@ def parser(x):
                              
 def load_sensor_data(name):
     df = pd.read_csv(join(kanto_data_path, name), delimiter='\t', parse_dates=[0], date_parser=parser, index_col=0)
-    pd.set_index(df, in_place=True)
     return df
 
 def write_sensor_data(sensor_dataframe, destination):
@@ -24,4 +23,5 @@ def write_sensor_data(sensor_dataframe, destination):
 def load_resampled_sensor_data(name):
     df = pd.read_csv(join(resampled_data_path, name))
     df.set_index(pd.DatetimeIndex(df['datetime']), inplace=True)
+    df = df.drop("datetime", axis=1)
     return df
