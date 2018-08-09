@@ -13,10 +13,10 @@ datapath = "datasets/japan"
 forecast_feature = "max_tp" # the feature we want to forecast
 train_val_split = 0.6 # point at which we split the dataset into train and val
 val_test_split = 0.8 # point at which we split the dataset into val and test
-train_fname = os.path.join("datasets/japan", "amd_{}_train.csv".format(forecast_feature)) # the train output file path
-test_fname = os.path.join("datasets/japan", "amd_{}_test.csv".format(forecast_feature)) # the test output file path
-val_fname = os.path.join("datasets/japan", "amd_{}_val.csv".format(forecast_feature)) # the validation output file path
-sampling_rate = "H" # sampling rate, for resampling, thus reducing the size of the data
+sampling_rate = "6H" # sampling rate, for resampling, thus reducing the size of the data
+train_fname = os.path.join("datasets/japan", "amd_{}_{}_train.csv".format(sampling_rate, forecast_feature)) # the train output file path
+test_fname = os.path.join("datasets/japan", "amd_{}_{}_test.csv".format(sampling_rate, forecast_feature)) # the test output file path
+val_fname = os.path.join("datasets/japan", "amd_{}_{}_val.csv".format(sampling_rate, forecast_feature)) # the validation output file path
 
 # load the data
 all_data_list = []
