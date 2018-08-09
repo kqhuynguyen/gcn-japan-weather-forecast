@@ -1,4 +1,0 @@
-*.pyc
-datasets/ptb_char/*.pkl
-datasets/japan/*
-logs/
