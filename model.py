@@ -264,14 +264,14 @@ class Model(object):
             self.rnn_input = tf.placeholder(tf.float32, 
                                         [self.batch_size, self.num_node, self.feat_in, self.num_time_steps],
                                         name="rnn_input")
-            self.rnn_input_seq = tf.unstack(self.rnn_input, self.num_time_steps, 3)
+            self.rnn_input_seq = tf.unstack(self.rnn_input, self.num_time_steps, 3) # input  for tf.nn.static_rnn
         else:
             raise Exception("[!] Unkown model type: {}".format(self.model_type))
         
-        self.rnn_output = tf.placeholder(tf.int64,
-                                         [self.batch_size, self.num_time_steps],
+        self.rnn_output = tf.placeholder(tf.float32,
+                                         [self.batch_size, self.num_node, self.feat_out, self.num_time_steps],
                                          name="rnn_output")
-        self.rnn_output_seq = tf.unstack(self.rnn_output, self.num_time_steps, 1)
+        self.rnn_output_seq = tf.unstack(self.rnn_output, self.num_time_steps, 3)
         self.model_step = tf.Variable(
             0, name='model_step', trainable=False)
             
@@ -306,11 +306,10 @@ class Model(object):
             predictions = []
             for output in outputs:
                 output_reshape = tf.reshape(output, [-1, self.num_hidden])
-                prediction = tf.matmul(output_reshape, output_variable['weight']) + output_variable['bias']
+                prediction = tf.matmul(output_reshape, output_variable['weight']) + output_variable['bias']  # (1, num_hidden)
                 if self.model_type == 'glstm':
-                    prediction = tf.reshape(prediction, [-1, self.num_node, 1])
+                    prediction = tf.reshape(prediction, [-1, self.num_node, self.feat_out])
                 predictions.append(prediction)
-            
             if self.model_type == 'lstm':
                 self.pred_out = tf.concat(predictions, 1)
             elif self.model_type == 'glstm':
@@ -325,12 +324,14 @@ class Model(object):
         
     def _build_loss(self):
         if self.classif_loss == "cross_entropy":
-            losses = [tf.nn.sparse_softmax_cross_entropy_with_logits(
-                      logits=tf.reshape(logits, [-1, self.num_node]), labels=labels) 
-                      for logits, labels in zip(self.predictions, self.rnn_output_seq)]
-            loss_sum = tf.reduce_sum(losses, axis=1)
-            loss_batchmean = tf.reduce_mean(loss_sum, name="model_loss")
-            
+            # losses = [tf.nn.sparse_softmax_cross_entropy_with_logits(
+            #           logits=tf.reshape(logits, [-1, self.num_node]), labels=labels) 
+            #           for logits, labels in zip(self.predictions, self.rnn_output_seq)]
+            # loss_sum = tf.reduce_sum(losses, axis=1)
+            # loss_batchmean = tf.reduce_mean(loss_sum, name="model_loss")
+            losses = [tf.divide(tf.square((tf.subtract(pred, target))),2)
+                        for pred, target in zip(self.predictions, self.rnn_output_seq)]
+            loss_batchmean = tf.reduce_mean(losses, name="model_loss")
         else:
             raise ValueError(
                     "Unsupported loss type {}".format(

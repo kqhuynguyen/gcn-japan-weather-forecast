@@ -9,6 +9,8 @@ from datetime import datetime
 from IPython import embed
 import tensorflow.contrib.slim as slim
 from scipy.sparse import coo_matrix
+from graph import adjacency, distance_scipy_spatial
+from sklearn.preprocessing import StandardScaler
 
 def save_config(model_dir, config):
     '''
@@ -63,34 +65,32 @@ def get_distance(x, y):
 class BatchLoader(object):
     def __init__(self, data_dir, dataset_name, batch_size, seq_length):
         sensor_locations_fname = os.path.join(data_dir, dataset_name, 'amd_master.tsv')
-        train_fname = os.path.join(data_dir, dataset_name, "amd_max_tp_train.csv")# the train output file path
-        test_fname = os.path.join(data_dir, dataset_name, "amd_max_tp_test.csv") # the test output file path
-        val_fname = os.path.join(data_dir, dataset_name, "amd_max_tp_val.csv") # the validation output file path
+        train_fname = os.path.join(data_dir, dataset_name, "amd_6H_max_tp_train.csv")# the train output file path
+        test_fname = os.path.join(data_dir, dataset_name, "amd_6H_max_tp_test.csv") # the test output file path
+        val_fname = os.path.join(data_dir, dataset_name, "amd_6H_max_tp_val.csv") # the validation output file path
+
+        # load the data into DataFrames
+        train_df = pd.read_csv(train_fname, index_col="datetime", parse_dates=["datetime"])
+        test_df = pd.read_csv(test_fname, index_col="datetime", parse_dates=["datetime"])
+        val_df = pd.read_csv(val_fname, index_col="datetime", parse_dates=["datetime"])
 
         # get the sensor locations
-        sensor_locations = pd.read_csv(sensor_locations_fname, delimiter="\t")
+        sensor_locations = pd.read_csv(sensor_locations_fname, delimiter="\t", usecols=["aid", "lat1", "lng1", "alt"])
+        sensor_locations = sensor_locations.loc[sensor_locations.aid.isin(list(train_df)),:].drop("aid", axis=1)
         num_sensors = sensor_locations.shape[0]
 
-        # construct an adjancency matrix out of the sensors' locations
-        adj = np.zeros([num_sensors, num_sensors])
-        for i in range(num_sensors):
-            for j in range(num_sensors):
-                x = sensor_locations.iloc[i,:]
-                y = sensor_locations.iloc[j,:]
-                adj[i][j] = np.sqrt((x["lat1"] - y["lat1"])**2 + (x["lng1"] - y["lng1"])**2)
-                adj[j][i] = adj[i][j]
-        
-        train = pd.read_csv(train_fname, index_col="datetime", parse_dates=["datetime"])
-        test = pd.read_csv(test_fname, index_col="datetime", parse_dates=["datetime"])
-        val = pd.read_csv(val_fname, index_col="datetime", parse_dates=["datetime"])
+        # construct an adjacency matrix out of the sensors' locations
+        dist, idx = distance_scipy_spatial(sensor_locations)
+        adj = adjacency(dist, idx)
 
-        data = [train, val, test]
-
+        # convert the dataframes into numpy arrays
+        data = [train_df.values, val_df.values, test_df.values]
+        for d in data:
+            print(d.shape)
         self.sizes = []
         self.all_batches = []
         self.all_data = data
         self.adj = adj
-
         print("Reshaping tensors...")
         for split, data in enumerate(data):  # split = 0:train, 1:valid, 2:test
             #Cutting training sample for check profile fast..(Temporal)
@@ -98,21 +98,16 @@ class BatchLoader(object):
             #    #Only for training set
             #    length = data.shape[0]
             #    data = data[:int(length/4)]
-            
-            length = data.shape[0]
-            data = data[: batch_size * seq_length * int(math.floor(length / (batch_size * seq_length)))]
+            scaler = StandardScaler(copy=False)
+            scaler.fit_transform(data)
+            num_features = data.shape[1]
             ydata = np.zeros_like(data)
-            ydata[:-1] = data.iloc[1:].copy()
+            ydata[:-1] = data[1:].copy()
             ydata[-1] = data[0].copy()
 
-            if split < 2:
-                x_batches = list(data.reshape([-1, batch_size, seq_length]))
-                y_batches = list(ydata.reshape([-1, batch_size, seq_length]))
-                self.sizes.append(len(x_batches))
-            else:
-                x_batches = list(data.reshape([-1, batch_size, seq_length]))
-                y_batches = list(ydata.reshape([-1, batch_size, seq_length]))
-                self.sizes.append(len(x_batches))
+            x_batches = list(data.reshape([-1, batch_size, num_features]))
+            y_batches = list(ydata.reshape([-1, batch_size, num_features]))
+            self.sizes.append(len(x_batches))
 
             self.all_batches.append([x_batches, y_batches])
 
