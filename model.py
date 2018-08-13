@@ -324,11 +324,12 @@ class Model(object):
         
     def _build_loss(self):
         if self.classif_loss == "cross_entropy":
-            # losses = [tf.nn.sparse_softmax_cross_entropy_with_logits(
-            #           logits=tf.reshape(logits, [-1, self.num_node]), labels=labels) 
-            #           for logits, labels in zip(self.predictions, self.rnn_output_seq)]
-            # loss_sum = tf.reduce_sum(losses, axis=1)
-            # loss_batchmean = tf.reduce_mean(loss_sum, name="model_loss")
+            losses = [tf.nn.sparse_softmax_cross_entropy_with_logits(
+                      logits=tf.reshape(logits, [-1, self.num_node]), labels=labels) 
+                      for logits, labels in zip(self.predictions, self.rnn_output_seq)]
+            loss_sum = tf.reduce_sum(losses, axis=1)
+            loss_batchmean = tf.reduce_mean(loss_sum, name="model_loss")
+        elif self.classif_loss == "l2_norm":
             losses = [tf.divide(tf.square((tf.subtract(pred, target))),2)
                         for pred, target in zip(self.predictions, self.rnn_output_seq)]
             loss_batchmean = tf.reduce_mean(losses, name="model_loss")
@@ -339,9 +340,9 @@ class Model(object):
             
         with tf.name_scope("losses"):
             self.loss = loss_batchmean
-            
-        self.model_summary = tf.summary.merge([tf.summary.scalar("model_loss/cross_entropy",
-                                                           self.loss)])
+        loss_scalar = tf.summary.scalar("model_loss/{}".format(self.classif_loss), self.loss)
+
+        self.model_summary = tf.summary.merge([loss_scalar])
         #if hasattr(self, "model_summary"):
         #    self.model_summary = loss_summary
             

@@ -128,20 +128,33 @@ class Trainer(object):
 
     def test(self):
         ##Testing
+        latest_checkpoint = tf.train.latest_checkpoint(self.model_dir)
+        if tf.train.latest_checkpoint(self.model_dir) is not None:
+            self.saver.restore(
+                self.sess,
+                latest_checkpoint
+            )
+            self.b_pretrain_loaded = True
+        else:
+            self.b_pretrain_loaded = False
+        self.model_summary_writer = None
+        res = None
         for n_sample in trange(self.data_loader.sizes[2], desc="Testing"):
            batch_x, batch_y = self.data_loader.next_batch(2)
            reshaped = batch_x.reshape([self.config.batch_size, 
                                                   self.config.num_node,
-                                                  self.config.feat_in,self.config.num_node])
+                                                  self.config.feat_in,self.config.num_time_steps])
            batch_x = reshaped
 
+           reshaped = batch_y.reshape([self.config.batch_size, self.config.num_node, self.config.feat_out, self.config.num_time_steps])
+           batch_y = reshaped
            feed_dict = {
                    self.model.rnn_input: batch_x,
                    self.model.rnn_output: batch_y
                }
            res = self.model.test(self.sess, feed_dict, self.model_summary_writer,
                                       with_output=True)
-           self.model_summary_writer = self._get_summary_writer(res)
+        print("Loss: {}".format(res["loss"]))
             
                 
     def _get_summary_writer(self, result):

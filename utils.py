@@ -65,9 +65,9 @@ def get_distance(x, y):
 class BatchLoader(object):
     def __init__(self, data_dir, dataset_name, batch_size, seq_length):
         sensor_locations_fname = os.path.join(data_dir, dataset_name, 'amd_master.tsv')
-        train_fname = os.path.join(data_dir, dataset_name, "amd_6H_max_tp_train.csv")# the train output file path
-        test_fname = os.path.join(data_dir, dataset_name, "amd_6H_max_tp_test.csv") # the test output file path
-        val_fname = os.path.join(data_dir, dataset_name, "amd_6H_max_tp_val.csv") # the validation output file path
+        train_fname = os.path.join(data_dir, dataset_name, "train.csv")# the train output file path
+        test_fname = os.path.join(data_dir, dataset_name, "test.csv") # the test output file path
+        val_fname = os.path.join(data_dir, dataset_name, "val.csv") # the validation output file path
 
         # load the data into DataFrames
         train_df = pd.read_csv(train_fname, index_col="datetime", parse_dates=["datetime"])
@@ -76,9 +76,8 @@ class BatchLoader(object):
 
         # get the sensor locations
         sensor_locations = pd.read_csv(sensor_locations_fname, delimiter="\t", usecols=["aid", "lat1", "lng1", "alt"])
-        sensor_locations = sensor_locations.loc[sensor_locations.aid.isin(list(train_df)),:].drop("aid", axis=1)
+        sensor_locations = sensor_locations.loc[sensor_locations.aid.isin([int(x) for x in list(train_df)[:-4]]),:].drop("aid", axis=1)
         num_sensors = sensor_locations.shape[0]
-
         # construct an adjacency matrix out of the sensors' locations
         dist, idx = distance_scipy_spatial(sensor_locations)
         adj = adjacency(dist, idx)
@@ -96,17 +95,25 @@ class BatchLoader(object):
             #Cutting training sample for check profile fast..(Temporal)
             #if split==0:
             #    #Only for training set
-            #    length = data.shape[0]
+            length = data.shape[0]
             #    data = data[:int(length/4)]
+            temperature_part = data[:,:-4] # sensor's temperature
+            seasonal_part = data[:,-4:] # seasonal data
+
             scaler = StandardScaler(copy=False)
-            scaler.fit_transform(data)
-            num_features = data.shape[1]
+            scaler.fit_transform(temperature_part) # scale the sensor's temperature part
+
+            num_features = temperature_part.shape[1]
+            seasonal_part = np.array([seasonal_part]).repeat(num_features, axis=1).reshape([length, 4 * num_features]) # repeat the seasonal part
+
+            data = np.concatenate([temperature_part, seasonal_part], axis=1)
+
             ydata = np.zeros_like(data)
             ydata[:-1] = data[1:].copy()
             ydata[-1] = data[0].copy()
 
-            x_batches = list(data.reshape([-1, batch_size, num_features]))
-            y_batches = list(ydata.reshape([-1, batch_size, num_features]))
+            x_batches = list(data.reshape([-1, batch_size, data.shape[1] * seq_length]))
+            y_batches = list(ydata.reshape([-1, batch_size, data.shape[1] * seq_length]))
             self.sizes.append(len(x_batches))
 
             self.all_batches.append([x_batches, y_batches])
