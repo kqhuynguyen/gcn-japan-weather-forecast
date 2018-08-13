@@ -30,7 +30,7 @@ train_arg.add_argument('--num_epochs', type=int, default=100, help='')
 train_arg.add_argument('--batch_size', type=int, default=20, help='')
 train_arg.add_argument('--random_seed', type=int, default=123, help='')
 train_arg.add_argument('--max_step', type=int, default=1000000, help='')
-train_arg.add_argument('--is_train', type=str2bool, default=True, help='')
+train_arg.add_argument('--is_train', type=str2bool, default=False, help='')
 train_arg.add_argument('--classif_loss', type=str,
                        default='l2_norm', choices=['cross_entropy', 'l2_norm'], help='')
 train_arg.add_argument('--learning_rate', type=float, default=1e-4, help='')
@@ -57,7 +57,7 @@ train_arg.add_argument('--num_time_steps', type=int, default=2, help='')
 misc_arg = add_argument_group('Misc')
 misc_arg.add_argument('--log_step', type=int, default=20, help='')
 misc_arg.add_argument('--log_dir', type=str, default='logs')
-misc_arg.add_argument('--load_path', type=str, default="")
+misc_arg.add_argument('--load_path', type=str, default="/home/infernov/Desktop/Summer/gcn-japan-weather-forecast/logs/japan_2018-08-13_22-42-21")
 misc_arg.add_argument('--gpu_memory_fraction', type=float, default=1.0)
 
 
