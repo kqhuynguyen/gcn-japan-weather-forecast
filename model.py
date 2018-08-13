@@ -5,7 +5,7 @@ import scipy.sparse
 from scipy.sparse import coo_matrix
 from scipy.io import loadmat
 import graph
-from IPython import embed
+# from IPython import embed
 from utils import show_all_variables
 
 #Test for tf1.0

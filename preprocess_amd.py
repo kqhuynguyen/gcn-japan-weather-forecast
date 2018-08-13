@@ -17,6 +17,7 @@ sampling_rate = "6H" # sampling rate, for resampling, thus reducing the size of 
 train_fname = os.path.join("datasets/japan", "amd_{}_{}_train.csv".format(sampling_rate, forecast_feature)) # the train output file path
 test_fname = os.path.join("datasets/japan", "amd_{}_{}_test.csv".format(sampling_rate, forecast_feature)) # the test output file path
 val_fname = os.path.join("datasets/japan", "amd_{}_{}_val.csv".format(sampling_rate, forecast_feature)) # the validation output file path
+seasonal_features = True # whether to add seasonal features to the data
 
 # load the data
 all_data_list = []
@@ -33,8 +34,15 @@ output_dataframe.set_index(pd.date_range(start=start_date, periods=periods, freq
 print("Dealing with N/A's...")
 output_dataframe.dropna(axis=1, thresh=250000, inplace=True) # only keep sensors with at least 250000 non-NA values
 output_dataframe.fillna(method="bfill", axis=1, inplace=True) # fill the NA values with back fill
+output_dataframe.fillna(method="ffill", axis=1, inplace=True) # fill the NA values with forward fill because some NA values have no precedents
 print("Resampling the data...")
 output_dataframe = output_dataframe.resample(sampling_rate).mean() # resample the data
+
+if (seasonal_features):
+    output_dataframe.loc[output_dataframe.month.isin(range(3,6)),"spring"] = 1
+    output_dataframe.loc[output_dataframe.month.isin(range(6,9)),"summer"] = 1
+    output_dataframe.loc[output_dataframe.month.isin(range(9,11)),"autumn"] = 1
+    output_dataframe.loc[output_dataframe.month.isin([12,1,2]),"winter"] = 1
 
 print("Splitting the data...")
 total_length = len(output_dataframe)
