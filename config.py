@@ -30,7 +30,7 @@ train_arg.add_argument('--num_epochs', type=int, default=100, help='')
 train_arg.add_argument('--batch_size', type=int, default=20, help='')
 train_arg.add_argument('--random_seed', type=int, default=123, help='')
 train_arg.add_argument('--max_step', type=int, default=1000000, help='')
-train_arg.add_argument('--is_train', type=str2bool, default=True, help='')
+train_arg.add_argument('--is_train', type=str2bool, default=False, help='')
 train_arg.add_argument('--classif_loss', type=str,
                        default='l2_norm', choices=['cross_entropy', 'l2_norm'], help='')
 train_arg.add_argument('--learning_rate', type=float, default=1e-4, help='')
@@ -48,7 +48,7 @@ model_arg.add_argument('--model_type', type=str, default='glstm',
 graph_arg = add_argument_group('Graph')
 graph_arg.add_argument('--num_node', type=int, default=100, help='')
 graph_arg.add_argument('--feat_in', type=int, default=5, help='') # max_tp and seasonal features
-graph_arg.add_argument('--feat_out', type=int, default=5, help='')
+graph_arg.add_argument('--feat_out', type=int, default=1, help='')
 graph_arg.add_argument('--num_hidden', type=int, default=50, help='')
 graph_arg.add_argument('--num_kernel', type=int, default=8, help='')
 train_arg.add_argument('--num_time_steps', type=int, default=2, help='')
