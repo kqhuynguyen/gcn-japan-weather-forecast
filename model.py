@@ -260,18 +260,21 @@ class Model(object):
                                         [self.batch_size, self.num_node, self.num_time_steps],
                                         name="rnn_input")
             self.rnn_input_seq = tf.unstack(self.rnn_input, self.num_time_steps, 2)
+            self.rnn_output = tf.placeholder(tf.float32,
+                                            [self.batch_size, self.num_node, self.num_time_steps],
+                                            name="rnn_output")
+            self.rnn_output_seq = tf.unstack(self.rnn_output, self.num_time_steps, 2)
         elif self.model_type == 'glstm':
             self.rnn_input = tf.placeholder(tf.float32, 
                                         [self.batch_size, self.num_node, self.feat_in, self.num_time_steps],
                                         name="rnn_input")
             self.rnn_input_seq = tf.unstack(self.rnn_input, self.num_time_steps, 3) # input  for tf.nn.static_rnn
+            self.rnn_output = tf.placeholder(tf.float32,
+                                            [self.batch_size, self.num_node, self.feat_out, self.num_time_steps],
+                                            name="rnn_output")
+            self.rnn_output_seq = tf.unstack(self.rnn_output, self.num_time_steps, 3)
         else:
             raise Exception("[!] Unkown model type: {}".format(self.model_type))
-        
-        self.rnn_output = tf.placeholder(tf.float32,
-                                         [self.batch_size, self.num_node, self.feat_out, self.num_time_steps],
-                                         name="rnn_output")
-        self.rnn_output_seq = tf.unstack(self.rnn_output, self.num_time_steps, 3)
         self.model_step = tf.Variable(
             0, name='model_step', trainable=False)
             
