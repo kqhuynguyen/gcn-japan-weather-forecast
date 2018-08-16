@@ -46,12 +46,12 @@ model_arg.add_argument('--model_type', type=str, default='glstm',
 
 # Hyperparams for graph
 graph_arg = add_argument_group('Graph')
-graph_arg.add_argument('--num_node', type=int, default=100, help='')
+graph_arg.add_argument('--num_node', type=int, default=20, help='')
 graph_arg.add_argument('--feat_in', type=int, default=1, help='') # max_tp and seasonal features
 graph_arg.add_argument('--feat_out', type=int, default=1, help='')
 graph_arg.add_argument('--num_hidden', type=int, default=50, help='')
-graph_arg.add_argument('--num_kernel', type=int, default=5, help='')
-train_arg.add_argument('--num_time_steps', type=int, default=2, help='')
+graph_arg.add_argument('--num_kernel', type=int, default=3, help='')
+train_arg.add_argument('--num_time_steps', type=int, default=5, help='')
 
 # Miscellaneous (summary write, model reload)
 misc_arg = add_argument_group('Misc')

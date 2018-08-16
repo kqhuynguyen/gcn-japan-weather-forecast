@@ -13,11 +13,11 @@ datapath = "datasets/japan"
 forecast_feature = "max_tp" # the feature we want to forecast
 train_val_split = 0.6 # point at which we split the dataset into train and val
 val_test_split = 0.8 # point at which we split the dataset into val and test
-sampling_rate = "6H" # sampling rate, for resampling, thus reducing the size of the data
+sampling_rate = "H" # sampling rate, for resampling, thus reducing the size of the data
 train_fname = os.path.join("datasets/japan", "amd_{}_{}_train.csv".format(sampling_rate, forecast_feature)) # the train output file path
 test_fname = os.path.join("datasets/japan", "amd_{}_{}_test.csv".format(sampling_rate, forecast_feature)) # the test output file path
 val_fname = os.path.join("datasets/japan", "amd_{}_{}_val.csv".format(sampling_rate, forecast_feature)) # the validation output file path
-seasonal_features = True # whether to add seasonal features to the data
+seasonal_features = False # whether to add seasonal features to the data
 
 # load the data
 all_data_list = []
@@ -33,8 +33,8 @@ output_dataframe = pd.concat(all_data_list, axis=1) # concat the dataframes in t
 output_dataframe.set_index(pd.date_range(start=start_date, periods=periods, freq=freq), inplace=True) # set a DatetimeIndex for the dataframe
 print("Dealing with N/A's...")
 output_dataframe.dropna(axis=1, thresh=250000, inplace=True) # only keep sensors with at least 250000 non-NA values
-output_dataframe.fillna(method="bfill", axis=1, inplace=True) # fill the NA values with back fill
-output_dataframe.fillna(method="ffill", axis=1, inplace=True) # fill the NA values with forward fill because some NA values have no precedents
+print(output_dataframe.isnull().sum())
+output_dataframe = output_dataframe.bfill(axis=1).ffill(axis=1) # fill the NA values with forward fill because some NA values have no precedents
 print("Resampling the data...")
 output_dataframe = output_dataframe.resample(sampling_rate).mean() # resample the data
 
@@ -49,6 +49,7 @@ total_length = len(output_dataframe)
 train, val, test = np.split(output_dataframe, [int(.6 * total_length), int(.8 * total_length)]) # split the data into train, validation and test sets
 # dealing with NA values
 print("Saving the data...")
+output_dataframe.to_csv(os.path.join(datapath, "data.csv"), index_label="datetime")
 train.to_csv(train_fname, index_label="datetime")
 test.to_csv(test_fname, index_label="datetime")
 val.to_csv(val_fname, index_label="datetime")
