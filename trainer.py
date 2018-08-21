@@ -107,7 +107,7 @@ class Trainer(object):
                                                    self.config.num_time_steps])
                     batch_x = reshaped
                     batch_y = batch_y.reshape([self.config.batch_size, self.config.num_node, self.config.num_time_steps])
-                elif self.config.model_type == 'glstm':
+                elif self.config.model_type == 'glstm' or self.config.model_type == 'gbasicrnn':
                     reshaped = batch_x.reshape([self.config.batch_size, 
                                                    self.config.num_node,
                                                    self.config.feat_in, self.config.num_time_steps])
@@ -148,7 +148,7 @@ class Trainer(object):
                                                 self.config.num_time_steps])
                 batch_x = reshaped
                 batch_y = batch_y.reshape([self.config.batch_size, self.config.num_node, self.config.num_time_steps])
-            elif self.config.model_type == 'glstm':
+            elif self.config.model_type == 'glstm' or self.config.model_type == 'gbasicrnn':
                 reshaped = batch_x.reshape([self.config.batch_size, 
                                                 self.config.num_node,
                                                 self.config.feat_in, self.config.num_time_steps])
@@ -162,7 +162,7 @@ class Trainer(object):
             }
             res = self.model.test(self.sess, feed_dict, self.model_summary_writer,
                                       with_output=True)
-        print("Loss: {}".format(res["loss"]))
+        print("rmse: {}".format(res["rmse"]))
             
                 
     def _get_summary_writer(self, result):

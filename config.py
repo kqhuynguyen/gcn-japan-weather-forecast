@@ -30,7 +30,7 @@ train_arg.add_argument('--num_epochs', type=int, default=100, help='')
 train_arg.add_argument('--batch_size', type=int, default=20, help='')
 train_arg.add_argument('--random_seed', type=int, default=123, help='')
 train_arg.add_argument('--max_step', type=int, default=1000000, help='')
-train_arg.add_argument('--is_train', type=str2bool, default=True, help='')
+train_arg.add_argument('--is_train', type=str2bool, default=False, help='')
 train_arg.add_argument('--classif_loss', type=str,
                        default='l2_norm', choices=['cross_entropy', 'l2_norm'], help='')
 train_arg.add_argument('--learning_rate', type=float, default=1e-4, help='')
@@ -41,8 +41,8 @@ train_arg.add_argument('--checkpoint_secs', type=int, default=300, help='')
 
 # Model args
 model_arg = add_argument_group('Model')
-model_arg.add_argument('--model_type', type=str, default='glstm',
-                        choices=['lstm', 'glstm'], help='')
+model_arg.add_argument('--model_type', type=str, default='gbasicrnn',
+                        choices=['lstm', 'glstm', 'gbasicrnn'], help='')
 
 # Hyperparams for graph
 graph_arg = add_argument_group('Graph')
@@ -57,7 +57,7 @@ train_arg.add_argument('--num_time_steps', type=int, default=5, help='')
 misc_arg = add_argument_group('Misc')
 misc_arg.add_argument('--log_step', type=int, default=20, help='')
 misc_arg.add_argument('--log_dir', type=str, default='logs')
-misc_arg.add_argument('--load_path', type=str, default="")
+misc_arg.add_argument('--load_path', type=str, default="grnn;k=3;knn=4")
 misc_arg.add_argument('--gpu_memory_fraction', type=float, default=1.0)
 
 

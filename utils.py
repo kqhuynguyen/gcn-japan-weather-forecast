@@ -32,7 +32,7 @@ def show_all_variables():
 
 def prepare_dirs(config):
     if config.load_path:
-        config.model_name = "{}_{}".format(config.task, config.load_path)
+        config.model_name = "{}".format(config.load_path)
     else:
         config.model_name = "{}_{}".format(config.task, get_time())
 
@@ -79,7 +79,7 @@ class BatchLoader(object):
         sensor_locations = sensor_locations.loc[sensor_locations.aid.isin([int(x) for x in list(train_df)]),:].drop("aid", axis=1)
         num_sensors = sensor_locations.shape[0]
         # construct an adjacency matrix out of the sensors' locations
-        dist, idx = distance_scipy_spatial(sensor_locations, k=6)
+        dist, idx = distance_scipy_spatial(sensor_locations, k=8)
         adj = adjacency(dist, idx)
 
         # convert the dataframes into numpy arrays
