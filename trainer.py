@@ -106,12 +106,13 @@ class Trainer(object):
                                                    self.config.num_node,
                                                    self.config.num_time_steps])
                     batch_x = reshaped
-                elif self.config.model_type == 'glstm':
+                    batch_y = batch_y.reshape([self.config.batch_size, self.config.num_node, self.config.num_time_steps])
+                elif self.config.model_type == 'glstm' or self.config.model_type == 'gbasicrnn':
                     reshaped = batch_x.reshape([self.config.batch_size, 
                                                    self.config.num_node,
                                                    self.config.feat_in, self.config.num_time_steps])
                     batch_x = reshaped # np.transpose(reshaped,(0, 3, 2, 1))
-                batch_y = batch_y.reshape([self.config.batch_size, 
+                    batch_y = batch_y.reshape([self.config.batch_size, 
                                                    self.config.num_node,
                                                    self.config.feat_out, self.config.num_time_steps])
                 feed_dict = {
@@ -140,21 +141,28 @@ class Trainer(object):
         self.model_summary_writer = None
         res = None
         for n_sample in trange(self.data_loader.sizes[2], desc="Testing"):
-           batch_x, batch_y = self.data_loader.next_batch(2)
-           reshaped = batch_x.reshape([self.config.batch_size, 
-                                                  self.config.num_node,
-                                                  self.config.feat_in,self.config.num_time_steps])
-           batch_x = reshaped
-
-           reshaped = batch_y.reshape([self.config.batch_size, self.config.num_node, self.config.feat_out, self.config.num_time_steps])
-           batch_y = reshaped
-           feed_dict = {
-                   self.model.rnn_input: batch_x,
-                   self.model.rnn_output: batch_y
-               }
-           res = self.model.test(self.sess, feed_dict, self.model_summary_writer,
+            batch_x, batch_y = self.data_loader.next_batch(2)
+            if self.config.model_type == 'lstm':
+                reshaped = batch_x.reshape([self.config.batch_size, 
+                                                self.config.num_node,
+                                                self.config.num_time_steps])
+                batch_x = reshaped
+                batch_y = batch_y.reshape([self.config.batch_size, self.config.num_node, self.config.num_time_steps])
+            elif self.config.model_type == 'glstm' or self.config.model_type == 'gbasicrnn':
+                reshaped = batch_x.reshape([self.config.batch_size, 
+                                                self.config.num_node,
+                                                self.config.feat_in, self.config.num_time_steps])
+                batch_x = reshaped # np.transpose(reshaped,(0, 3, 2, 1))
+                batch_y = batch_y.reshape([self.config.batch_size, 
+                                                self.config.num_node,
+                                                self.config.feat_out, self.config.num_time_steps])
+            feed_dict = {
+                self.model.rnn_input: batch_x,
+                self.model.rnn_output: batch_y
+            }
+            res = self.model.test(self.sess, feed_dict, self.model_summary_writer,
                                       with_output=True)
-        print("Loss: {}".format(res["loss"]))
+        print("rmse: {}".format(res["rmse"]))
             
                 
     def _get_summary_writer(self, result):

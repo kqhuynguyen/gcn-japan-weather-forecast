@@ -32,7 +32,7 @@ def show_all_variables():
 
 def prepare_dirs(config):
     if config.load_path:
-        config.model_name = "{}_{}".format(config.task, config.load_path)
+        config.model_name = "{}".format(config.load_path)
     else:
         config.model_name = "{}_{}".format(config.task, get_time())
 
@@ -76,10 +76,10 @@ class BatchLoader(object):
 
         # get the sensor locations
         sensor_locations = pd.read_csv(sensor_locations_fname, delimiter="\t", usecols=["aid", "lat1", "lng1", "alt"])
-        sensor_locations = sensor_locations.loc[sensor_locations.aid.isin([int(x) for x in list(train_df)[:-4]]),:].drop("aid", axis=1)
+        sensor_locations = sensor_locations.loc[sensor_locations.aid.isin([int(x) for x in list(train_df)]),:].drop("aid", axis=1)
         num_sensors = sensor_locations.shape[0]
         # construct an adjacency matrix out of the sensors' locations
-        dist, idx = distance_scipy_spatial(sensor_locations)
+        dist, idx = distance_scipy_spatial(sensor_locations, k=8)
         adj = adjacency(dist, idx)
 
         # convert the dataframes into numpy arrays
@@ -97,16 +97,16 @@ class BatchLoader(object):
             #    #Only for training set
             length = data.shape[0]
             #    data = data[:int(length/4)]
-            temperature_part = data[:,:-4] # sensor's temperature
-            seasonal_part = data[:,-4:] # seasonal data
+            # temperature_part = data[:,:-4] # sensor's temperature
+            # seasonal_part = data[:,-4:] # seasonal data
 
             scaler = StandardScaler(copy=False)
-            scaler.fit_transform(temperature_part) # scale the sensor's temperature part
+            scaler.fit_transform(data) # scale the sensor's temperature part
 
-            num_features = temperature_part.shape[1]
-            seasonal_part = np.array([seasonal_part]).repeat(num_features, axis=1).reshape([length, 4 * num_features]) # repeat the seasonal part
+            num_features = data.shape[1]
+            # seasonal_part = np.array([seasonal_part]).repeat(num_features, axis=1).reshape([length, 4 * num_features]) # repeat the seasonal part
 
-            data = np.concatenate([temperature_part, seasonal_part], axis=1)
+            # data = np.concatenate([temperature_part, seasonal_part], axis=1)
 
             ydata = np.zeros_like(temperature_part)
             ydata[:-1] = temperature_part[1:].copy()

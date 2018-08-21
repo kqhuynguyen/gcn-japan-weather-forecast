@@ -218,6 +218,79 @@ class gconvLSTMCell(RNNCell):
                     new_state = tf.concat([new_c, new_h], 1)
                 return new_h, new_state
 
+class gconvRNNCell(RNNCell):
+    def __init__(self, num_units, forget_bias=1.0,
+                activation=None, reuse=None,
+                laplacian=None, lmax=None, K=None, feat_in=None, nNode=None):
+        if tfversion == 'new':
+            super(gconvLSTMCell, self).__init__(_reuse=reuse) #super what is it?
+        
+        self._num_units = num_units
+        self._forget_bias = forget_bias
+        self._activation = activation or tf.tanh
+        self._laplacian = laplacian
+        self._lmax = lmax
+        self._K = K
+        self._feat_in = feat_in
+        self._nNode = nNode
+        
+        
+    @property
+    def state_size(self):
+        return self._num_units
+    @property
+    def output_size(self):
+        return self._num_units
+    
+    def zero_state(self, batch_size, dtype):
+        with tf.name_scope(type(self).__name__ + "myZeroState"):
+            zero_state_h = tf.zeros([batch_size, self._nNode, self._num_units], name='h')
+            #print("When it called, I print batch_size", batch_size)
+            return zero_state_h
+    
+    def __call__(self, inputs, state, scope=None):
+        with tf.variable_scope(scope or type(self).__name__):
+            h = state
+            laplacian = self._laplacian
+            lmax = self._lmax
+            K = self._K
+            feat_in = self._feat_in
+        
+            #The inputs : [batch_size, nNode, feat_in, nTime?] size tensor
+            if feat_in is None:
+                #Take out the shape of input
+                batch_size, nNode, feat_in = inputs.get_shape()
+                print("hey!")
+                
+            feat_out = self._num_units
+                
+            if K is None:
+                K = 2
+            
+            scope = tf.get_variable_scope()
+            with tf.variable_scope(scope) as scope:
+                try:
+                    Wx = tf.get_variable("Wx", [K*feat_in, feat_out], dtype=tf.float32,
+                                           initializer=tf.random_uniform_initializer(minval=-0.1, maxval=0.1))
+                    Wh = tf.get_variable("Wh", [K*feat_out, feat_out], dtype=tf.float32,
+                                           initializer=tf.random_uniform_initializer(minval=-0.1, maxval=0.1))
+                    
+                except ValueError:
+                    Wx = tf.get_variable("Wx", [K*feat_in, feat_out], dtype=tf.float32,
+                                           initializer=tf.random_uniform_initializer(minval=-0.1, maxval=0.1))
+                    Wh = tf.get_variable("Wh", [K*feat_out, feat_out], dtype=tf.float32,
+                                           initializer=tf.random_uniform_initializer(minval=-0.1, maxval=0.1))                    
+                
+                b = tf.get_variable("b", [feat_out])
+                
+                # gconv Calculation
+                Wxxt = cheby_conv(inputs, laplacian, lmax, feat_out, K, Wxxt)
+                Whht = cheby_conv(h, laplacian, lmax, feat_out, K, Whht)
+                at = Wxxt + Whht + b
+                ht = tf.tanh(at)
+
+                return ht
+
 class Model(object):
     """
     Defined:
@@ -248,6 +321,7 @@ class Model(object):
         
         self._build_placeholders()
         self._build_model()
+        self._build_metric()
         self._build_steps()
         self._build_optim()
         
@@ -260,18 +334,21 @@ class Model(object):
                                         [self.batch_size, self.num_node, self.num_time_steps],
                                         name="rnn_input")
             self.rnn_input_seq = tf.unstack(self.rnn_input, self.num_time_steps, 2)
-        elif self.model_type == 'glstm':
+            self.rnn_output = tf.placeholder(tf.float32,
+                                            [self.batch_size, self.num_node, self.num_time_steps],
+                                            name="rnn_output")
+            self.rnn_output_seq = tf.unstack(self.rnn_output, self.num_time_steps, 2)
+        elif self.model_type == 'glstm' or self.model_type == 'gbasicrnn':
             self.rnn_input = tf.placeholder(tf.float32, 
                                         [self.batch_size, self.num_node, self.feat_in, self.num_time_steps],
                                         name="rnn_input")
             self.rnn_input_seq = tf.unstack(self.rnn_input, self.num_time_steps, 3) # input  for tf.nn.static_rnn
+            self.rnn_output = tf.placeholder(tf.float32,
+                                            [self.batch_size, self.num_node, self.feat_out, self.num_time_steps],
+                                            name="rnn_output")
+            self.rnn_output_seq = tf.unstack(self.rnn_output, self.num_time_steps, 3)
         else:
             raise Exception("[!] Unkown model type: {}".format(self.model_type))
-        
-        self.rnn_output = tf.placeholder(tf.float32,
-                                         [self.batch_size, self.num_node, self.feat_out, self.num_time_steps],
-                                         name="rnn_output")
-        self.rnn_output_seq = tf.unstack(self.rnn_output, self.num_time_steps, 3)
         self.model_step = tf.Variable(
             0, name='model_step', trainable=False)
             
@@ -283,7 +360,7 @@ class Model(object):
                 output_variable = {
                     'weight': tf.Variable(tf.random_normal([self.num_hidden, n_classes])),
                     'bias' : tf.Variable(tf.random_normal([n_classes]))}
-            elif self.model_type =='glstm':
+            elif self.model_type =='glstm' or self.model_type == 'gbasicrnn':
                 cell = gconvLSTMCell(num_units=self.num_hidden, forget_bias=1.0, 
                                  laplacian=self.laplacian, lmax=self.lmax, 
                                  feat_in=self.feat_in, K=self.num_kernel, 
@@ -307,12 +384,12 @@ class Model(object):
             for output in outputs:
                 output_reshape = tf.reshape(output, [-1, self.num_hidden])
                 prediction = tf.matmul(output_reshape, output_variable['weight']) + output_variable['bias']  # (1, num_hidden)
-                if self.model_type == 'glstm':
+                if self.model_type == 'glstm' or self.model_type == 'gbasicrnn':
                     prediction = tf.reshape(prediction, [-1, self.num_node, self.feat_out])
                 predictions.append(prediction)
             if self.model_type == 'lstm':
                 self.pred_out = tf.concat(predictions, 1)
-            elif self.model_type == 'glstm':
+            elif self.model_type == 'glstm' or self.model_type == 'gbasicrnn':
                 self.pred_out = tf.concat(predictions, 2)
 
             #pred_out_softmax = tf.nn.softmax(pred_out,dim=1)
@@ -337,7 +414,6 @@ class Model(object):
             raise ValueError(
                     "Unsupported loss type {}".format(
                     self.config.classif_loss))
-            
         with tf.name_scope("losses"):
             self.loss = loss_batchmean
         loss_scalar = tf.summary.scalar("model_loss/{}".format(self.classif_loss), self.loss)
@@ -345,7 +421,11 @@ class Model(object):
         self.model_summary = tf.summary.merge([loss_scalar])
         #if hasattr(self, "model_summary"):
         #    self.model_summary = loss_summary
-            
+    def _build_metric(self):
+        squared_difference = [tf.square((tf.subtract(pred, target)))
+                    for pred, target in zip(self.predictions, self.rnn_output_seq)]
+        self.rmse = tf.sqrt(tf.reduce_mean(squared_difference, name="model_rmse"))
+
     def _build_steps(self):
         def run(sess, feed_dict, fetch,
                 summary_op, summary_writer, output_op=None, output_img=None):
@@ -373,6 +453,7 @@ class Model(object):
         def test(sess, feed_dict, summary_writer=None,
                  with_output=False):
             fetch = {'loss': self.loss,
+                    'rmse': self.rmse,
                     'step': self.model_step}
             return run(sess, feed_dict, fetch,
                        self.model_summary, summary_writer,
