@@ -111,9 +111,15 @@ class BatchLoader(object):
             ydata = np.zeros_like(temperature_part)
             ydata[:-1] = temperature_part[1:].copy()
             ydata[-1] = temperature_part[0].copy()
+            
+            x_batches = data.reshape([-1, batch_size, seq_length, data.shape[1]])
+            x_batches = x_batches.transpose((0, 2, 1))
+            x_batches = list(x_batches.reshape([-1, batch_size, data.shape[1] * seq_length]))
+            
+            y_batches = ydata.reshape([-1, batch_size, seq_length, ydata.shape[1]])
+            y_batches = y_batches.transpose((0, 2, 1))
+            y_batches = list(y_batches.reshape([-1, batch_size, ydata.shape[1] * seq_length]))
 
-            x_batches = list(data.reshape([-1, batch_size, data.shape[1] * seq_length]))
-            y_batches = list(ydata.reshape([-1, batch_size, ydata.shape[1] * seq_length]))
             self.sizes.append(len(x_batches))
 
             self.all_batches.append([x_batches, y_batches])
